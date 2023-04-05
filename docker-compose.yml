@@ -1,0 +1,132 @@
+version: "3"
+
+networks:
+  local_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.1.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - local_network
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  broker:
+      image: confluentinc/cp-kafka:6.1.0
+      hostname: broker
+      container_name: broker
+      depends_on:
+        - zookeeper
+      ports:
+        - "9092:9092"
+        - "9101:9101"
+      environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:19092
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://broker:19092
+        KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+        KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      networks:
+        - local_network
+      restart: always
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+
+  redis:
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.31
+    hostname: redis-container
+    container_name: redis-container
+    image: redis:6.2.6-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server
+    volumes:
+      - ../volumes/redis/data:/server/redis/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  central_node:
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.41
+    build: .
+    container_name: central_node
+    ports:
+      - "8050:8050"
+    depends_on:
+      - redis
+    environment:
+      NODE_TYPE: "central"
+      REDIS_SERVER: 10.0.0.31
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  remote_node_1:
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.51
+    build: .
+    container_name: remote_node_1
+    depends_on:
+      - broker
+      - redis
+    environment:
+      NODE_TYPE: "remote"
+      KAFKA_SERVER: broker:19092
+      REDIS_SERVER: 10.0.0.31
+      KAFKA_CONSUMER_GROUP: "remote1"
+      KAFKA_TOPIC: "remote-1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  remote_node_2:
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.61
+    build: .
+    container_name: remote_node_2
+    depends_on:
+      - broker
+      - redis
+    environment:
+      NODE_TYPE: "remote"
+      KAFKA_SERVER: broker:19092
+      REDIS_SERVER: 10.0.0.31
+      KAFKA_CONSUMER_GROUP: "remote2"
+      KAFKA_TOPIC: "remote-2"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  remote_node_3:
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.71
+    build: .
+    container_name: remote_node_3
+    depends_on:
+      - broker
+      - redis
+    environment:
+      NODE_TYPE: "remote"
+      KAFKA_SERVER: broker:19092
+      REDIS_SERVER: 10.0.0.31
+      KAFKA_CONSUMER_GROUP: "remote3"
+      KAFKA_TOPIC: "remote-3"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
