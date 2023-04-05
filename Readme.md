@@ -10,6 +10,8 @@ The system architecture consists of the following components:
 3. **Central Node**: A Python script that subscribes to the Kafka topic that contains the processed text data, aggregates the word counts from each remote node and displays the top 10 most frequently used words on a dashboard.
 The system follows the fog computing approach by performing part of the computation on edge nodes (remote nodes) and then aggregating and finalizing the results on a central node.
 
+![Architecture](arch.jpg)
+
 ### Getting Started
 To get started with the system, follow these steps:
 
@@ -19,8 +21,11 @@ To get started with the system, follow these steps:
 ```
 docker-compose up
 ```
-
-4. Wait for the system to start up. You can check the logs to monitor the progress.
+4. run the text generator to start sending random text to each remote node.
+```
+python text_generator.py
+```
+5. Wait for the system to start up. You can check the logs to monitor the progress.
 Once the system is up and running, open a web browser and navigate to http://localhost:8050 to view the dashboard.
 
 ### Configuration
